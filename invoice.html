@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martins Cafe Invoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .invoice-container {
+            width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 40px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .logo h1 {
+            margin: 0;
+            font-size: 3rem;
+            color: #333;
+        }
+        .logo span {
+            font-size: 1.5rem;
+            color: #666;
+        }
+        .address {
+            text-align: right;
+        }
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .bill-to, .invoice-info {
+            width: 48%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        table th {
+            background-color: #f4f4f4;
+            text-transform: uppercase;
+        }
+        .totals {
+            width: 40%;
+            margin-left: auto;
+            margin-top: 20px;
+        }
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .totals-row.total {
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+        }
+        .signature {
+            margin-top: 50px;
+            text-align: center;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            <div class="logo">
+                <h1>Martins Cafe</h1>
+            </div>
+            <div class="address">
+                <p>Martins Cafe, St. Rocks, 1-B, Randive Marg,<br> Chikoowadi, Borivali (W), Mumbai - 400091<br> Mumbai Suburban, Maharashtra, 400092, India</p>
+            </div>
+        </div>
+
+        <div class="invoice-details">
+            <div class="bill-to">
+                <h3>TAX INVOICE</h3>
+                <p>Invoice no: <span id="invoice-no"></span></p>
+            </div>
+            <div class="invoice-info">
+                <p>Invoice date: <span id="invoice-date"></span></p>
+                <p>Due date: <span id="due-date"></span></p>
+            </div>
+        </div>
+        
+        <div class="bill-to">
+            <h4>BILL TO</h4>
+            <p id="customer-name">Martin Fernandes</p>
+            <p>102, Shrinath Apts, SV Road, Opp. Sony Mony Electronics,<br> Datta Park, Borivali (W), Chikoowadi, Borivali (W),<br> Mumbai-400091, Mumbai Suburban, Maharashtra, 400092, India</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Qty</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody id="invoice-items">
+                <!-- Invoice items will be dynamically inserted here -->
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row">
+                <span>Net Amount:</span>
+                <span id="net-amount"></span>
+            </div>
+            <div class="totals-row">
+                <span>SGST (28%):</span>
+                <span id="sgst-amount"></span>
+            </div>
+            <div class="totals-row">
+                <span>CGST (28%):</span>
+                <span id="cgst-amount"></span>
+            </div>
+            <div class="totals-row total">
+                <span>TOTAL DUE (INR):</span>
+                <span id="total-due"></span>
+            </div>
+        </div>
+        
+        <div class="signature">
+            <p>_______________________</p>
+            <p>MARTIN FERNANDES</p>
+        </div>
+
+        <div class="footer">
+            <p>Contact: martinscafe.in | martinfernsp@gmail.com | +91 9324189870</p>
+            <button onclick="downloadInvoice()">Download PDF</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cartData = urlParams.get('cart');
+            const cartItems = JSON.parse(cartData);
+
+            const invoiceNo = 'INV' + Math.floor(Math.random() * 10000);
+            const today = new Date();
+            const invoiceDate = today.toLocaleDateString('en-GB');
+            const dueDate = new Date(today.getTime() + (14 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB');
+
+            document.getElementById('invoice-no').textContent = invoiceNo;
+            document.getElementById('invoice-date').textContent = invoiceDate;
+            document.getElementById('due-date').textContent = dueDate;
+
+            const invoiceBody = document.getElementById('invoice-items');
+            invoiceBody.innerHTML = '';
+            
+            let netAmount = 0;
+            const itemCounts = {};
+            cartItems.forEach(item => {
+                if (itemCounts[item.name]) {
+                    itemCounts[item.name].quantity++;
+                } else {
+                    itemCounts[item.name] = { quantity: 1, price: item.price };
+                }
+            });
+
+            for (const name in itemCounts) {
+                const item = itemCounts[name];
+                const subtotal = item.price * item.quantity;
+                netAmount += subtotal;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${name}</td>
+                    <td>₹${item.price.toFixed(2)}</td>
+                    <td>${item.quantity}</td>
+                    <td>₹${subtotal.toFixed(2)}</td>
+                `;
+                invoiceBody.appendChild(row);
+            }
+            
+            const gstRate = 0.28;
+            const gstAmount = netAmount * gstRate;
+            const sgst = gstAmount / 2;
+            const cgst = gstAmount / 2;
+            const totalDue = netAmount + gstAmount;
+
+            document.getElementById('net-amount').textContent = `₹${netAmount.toFixed(2)}`;
+            document.getElementById('sgst-amount').textContent = `₹${sgst.toFixed(2)}`;
+            document.getElementById('cgst-amount').textContent = `₹${cgst.toFixed(2)}`;
+            document.getElementById('total-due').textContent = `₹${totalDue.toFixed(2)}`;
+        });
+        
+        function downloadInvoice() {
+            const invoiceContainer = document.querySelector('.invoice-container');
+            html2canvas(invoiceContainer).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                doc.save('invoice.pdf');
+            });
+        }
+    </script>
+</body>
+</html>
